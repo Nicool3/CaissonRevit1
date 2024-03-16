@@ -43,11 +43,13 @@ namespace CaissonRevit1
                 double h_rjdd = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("刃脚底标高").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
                 double b_rjn = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("刃脚内凸宽度").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
                 double b_rjw = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("刃脚外凸宽度").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                double h_rjw = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("刃脚外凸高度").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
                 double h_dbt = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("底板端部上凸高度").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
                 double b_dbt = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("底板端部上凸宽度").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET) - b_rjn;
 
                 double angle1 = Math.Atan(h_dbt / b_rjn);
                 double angle2 = Math.Atan(h_dbt / b_dbt);
+                double angle3 = Math.Atan(h_rjw / b_rjw);
                 double la1 = UnitUtils.Convert(200, DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET); //延伸长度1
 
                 //设定其他参数
@@ -58,7 +60,7 @@ namespace CaissonRevit1
                 #endregion
 
                 #region 创建底板钢筋
-                
+                /*
                 //X向顶部
                 using (Transaction tr = new Transaction(doc))
                 {
@@ -82,7 +84,6 @@ namespace CaissonRevit1
                     int r1 = 18;
                     int space1 = 150;
                     int n1 = Int32.Parse(fi.Symbol.LookupParameter("沉井净宽").AsValueString()) / space1;
-                    
 
                     IList<XYZ> ps = new List<XYZ>();
                     ps.Add(new XYZ(p0.X - length / 2 + b_rjn + b_dbt-tbh2*Math.Sin(angle2)+ la1 * Math.Cos(angle2), p0.Y - width / 2 + tbh2, p0.Z - tbh2*Math.Cos(angle2)- la1 * Math.Sin(angle2)));
@@ -158,7 +159,7 @@ namespace CaissonRevit1
                     rebar.get_Parameter(BuiltInParameter.NUMBER_PARTITION_PARAM).Set("4");
                     tr.Commit();
                 }
-                
+                */
                 #endregion
 
                 #region 创建刃脚钢筋
@@ -190,9 +191,12 @@ namespace CaissonRevit1
                     double space2 = 200;
                     int n2 = (int)Math.Floor((Int32.Parse(fi.Symbol.LookupParameter("刃脚底标高").AsValueString()) - Int32.Parse(fi.Symbol.LookupParameter("底板厚度").AsValueString())) / space2);
                     double la2 = UnitUtils.Convert(Math.Ceiling(Int32.Parse(fi.Symbol.LookupParameter("沉井净长").AsValueString()) / 3.0 / 100) * 100, DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-                    TaskDialog.Show("提示", (Math.Ceiling(Int32.Parse(fi.Symbol.LookupParameter("沉井净长").AsValueString()) / 3.0 / 100) * 100).ToString()); 
-                    IList<Curve> curves2 = new List<Curve>() { Line.CreateBound(p1 + new XYZ(la2 + t2 + b_rjw, 0,0), p1), Line.CreateBound(p1, p2), Line.CreateBound(p2, p2 + new XYZ(la2 + t2 + b_rjw, 0, 0)) };
-                    IList<Curve> curves3 = new List<Curve>() { Line.CreateBound(p3 - new XYZ(la2 + t2 + b_rjw, 0, 0), p3), Line.CreateBound(p3, p4), Line.CreateBound(p4, p4 - new XYZ(la2 + t2 + b_rjw, 0, 0)) };
+                    IList<Curve> curves2 = new List<Curve>() { Line.CreateBound(p1 + new XYZ(la2 + t2 + b_rjw, 0, space1/304.8/2), p1 + new XYZ(0, 0, space1 / 304.8 / 2)),
+                                                               Line.CreateBound(p1 + new XYZ(0, 0, space1 / 304.8 / 2), p2 + new XYZ(0, 0, space1 / 304.8 / 2)),
+                                                               Line.CreateBound(p2+ new XYZ(0, 0, space1 / 304.8 / 2), p2 + new XYZ(la2 + t2 + b_rjw, 0, space1 / 304.8 / 2)) };
+                    IList<Curve> curves3 = new List<Curve>() { Line.CreateBound(p3 - new XYZ(la2 + t2 + b_rjw, 0, space1 / 304.8 / 2), p3+ new XYZ(0, 0, space1 / 304.8 / 2)),
+                                                               Line.CreateBound(p3+ new XYZ(0, 0, space1 / 304.8 / 2), p4+ new XYZ(0, 0, space1 / 304.8 / 2)),
+                                                               Line.CreateBound(p4+ new XYZ(0, 0, space1 / 304.8 / 2), p4 - new XYZ(la2 + t2 + b_rjw, 0, space1 / 304.8 / 2)) };
                     RebarBarType barType2 = new FilteredElementCollector(doc).OfClass(typeof(RebarBarType)).FirstOrDefault(t => t.Name == r2.ToString() + " HRB400") as RebarBarType;
 
                     tr.Start("创建刃脚外侧水平附加钢筋");
@@ -205,25 +209,29 @@ namespace CaissonRevit1
                     }
                     tr.Commit();
                 }
-
+                */
                 
                 //刃脚外侧竖向
                 using (Transaction tr = new Transaction(doc))
                 {                    
-                    int r1 = 20;
+                    int r1 = 22;
                     int space1 = 150;
                     int n1 = Int32.Parse(fi.Symbol.LookupParameter("沉井净宽").AsValueString()) / space1;
                     int n2 = Int32.Parse(fi.Symbol.LookupParameter("沉井净长").AsValueString()) / space1;
-                    Curve curve1 = Line.CreateBound(new XYZ(p0.X - length / 2 - t2 + tbh2, p0.Y - width / 2 + tbh2, p0.Z + h_rjd + h_bj - 800 / 304.8), new XYZ(p0.X - length / 2 - t2 + tbh2, p0.Y - width / 2 + tbh2, p0.Z + h_rjd + h_jd - tbh2));
-                    Curve curve2 = Line.CreateBound(new XYZ(p0.X - length / 2 + tbh2, p0.Y + width / 2 + t2 - tbh2, p0.Z + h_rjd + h_bj - 800 / 304.8), new XYZ(p0.X - length / 2 + tbh2, p0.Y + width / 2 + t2 - tbh2, p0.Z + h_rjd + h_jd - tbh2));
-                    Curve curve3 = Line.CreateBound(new XYZ(p0.X + length / 2 + t2 - tbh2, p0.Y + width / 2 - tbh2, p0.Z + h_rjd + h_bj - 800 / 304.8), new XYZ(p0.X + length / 2 + t2 - tbh2, p0.Y + width / 2 - tbh2, p0.Z + h_rjd + h_jd - tbh2));
-                    Curve curve4 = Line.CreateBound(new XYZ(p0.X + length / 2 - tbh2, p0.Y - width / 2 - t2 + tbh2, p0.Z + h_rjd + h_bj - 800 / 304.8), new XYZ(p0.X + length / 2 - tbh2, p0.Y - width / 2 - t2 + tbh2, p0.Z + h_rjd + h_jd - tbh2));
+                    Curve curve1 = Line.CreateBound(new XYZ(p0.X - length / 2 - t2 - b_rjw + tbh1, p0.Y - width / 2 + tbh1, p0.Z - h_rjdd + tbh1), 
+                                                    new XYZ(p0.X - length / 2 - t2 - b_rjw + tbh1, p0.Y - width / 2 + tbh1, p0.Z - t3- tbh1/Math.Tan(Math.PI/4+angle3/2)));
+                    Curve curve2 = Line.CreateBound(new XYZ(p0.X - length / 2 + tbh1, p0.Y + width / 2 + t2 + b_rjw - tbh1, p0.Z - h_rjdd + tbh1), 
+                                                    new XYZ(p0.X - length / 2 + tbh1, p0.Y + width / 2 + t2 + b_rjw - tbh1, p0.Z - t3 - tbh1 / Math.Tan(Math.PI / 4 + angle3 / 2)));
+                    Curve curve3 = Line.CreateBound(new XYZ(p0.X + length / 2 + t2 + b_rjw - tbh1, p0.Y + width / 2 - tbh1, p0.Z - h_rjdd + tbh1), 
+                                                    new XYZ(p0.X + length / 2 + t2 + b_rjw - tbh1, p0.Y + width / 2 - tbh1, p0.Z - t3 - tbh1 / Math.Tan(Math.PI / 4 + angle3 / 2)));
+                    Curve curve4 = Line.CreateBound(new XYZ(p0.X + length / 2 - tbh1, p0.Y - width / 2 - t2 - b_rjw + tbh1, p0.Z - h_rjdd + tbh1), 
+                                                    new XYZ(p0.X + length / 2 - tbh1, p0.Y - width / 2 - t2 - b_rjw + tbh1, p0.Z - t3 - tbh1 / Math.Tan(Math.PI / 4 + angle3 / 2)));
                     IList<Curve> curves = new List<Curve>() { curve1, curve2, curve3, curve4 };
                     IList<XYZ> norms = new List<XYZ>() { XYZ.BasisY, XYZ.BasisX, -XYZ.BasisY, -XYZ.BasisX };
                     IList<int> nums = new List<int>() { n1, n2, n1, n2 };
                     RebarBarType barType = new FilteredElementCollector(doc).OfClass(typeof(RebarBarType)).FirstOrDefault(t => t.Name == r1.ToString() + " HRB400") as RebarBarType;
 
-                    tr.Start("创建上阶壁板外侧竖向钢筋");
+                    tr.Start("创建刃脚外侧竖向钢筋");
                     for(int i=0;i<4;i++) {
                         Rebar rebar = Rebar.CreateFromCurves(doc, RebarStyle.Standard, barType, null, null,
                                 element, norms[i], new List<Curve>() { curves[i] }, RebarHookOrientation.Left, RebarHookOrientation.Left, true, true);
@@ -232,7 +240,7 @@ namespace CaissonRevit1
                     }
                     tr.Commit();
                 }
-                */
+                
                 #endregion
 
                 #region 创建上阶壁板钢筋
@@ -294,6 +302,57 @@ namespace CaissonRevit1
         }
     }
 
+    [TransactionAttribute(TransactionMode.Manual)]
+    public class RevitDeleteAllReins : IExternalCommand
+    {
+        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+        {
+            UIDocument uiDoc = commandData.Application.ActiveUIDocument;
+            Document doc = uiDoc.Document;
+            Selection selection = uiDoc.Selection;
+            Reference reference = selection.PickObject(ObjectType.Element);
+            Element element = doc.GetElement(reference);
+            //object obj = element.GetGeometryObjectFromReference(reference);
+            //Face face = obj as Face;
+            if (element != null)
+            {
+                if (element.GetType() != typeof(FamilyInstance))
+                {
+                    TaskDialog.Show("错误", "所选对象不是族实例");
+                    return Result.Failed;
+                }
+
+                //ViewPlan viewPlan = doc.ActiveView as ViewPlan;
+                //if (viewPlan == null)
+                //{
+                //    TaskDialog.Show("错误", "不是viewPlan");
+                //    return Result.Failed;
+                //}
+
+                //CurveArray curveArray1 = new CurveArray();
+                //curveArray1.Append(Line.CreateBound(new XYZ(p0.X-length/2-t2+tbh1, p0.Y - width / 2 - t2 + tbh1, 0), new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y + width / 2 + t2 - tbh1, 0)));
+                //curveArray1.Append(Line.CreateBound(new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y + width / 2 + t2 - tbh1, 0), new XYZ(p0.X + length / 2 + t2 - tbh1, p0.Y + width / 2 + t2 - tbh1, 0)));
+                //doc.Create.NewDetailCurveArray(viewPlan, curveArray1);
+
+                XYZ p0 = (element.Location as LocationPoint).Point;
+                FamilyInstance fi = element as FamilyInstance;
+                double t1 = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                double t2 = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("下部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                double length = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("沉井净长").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                double width = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("沉井净宽").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                Level LevelDBBG = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().FirstOrDefault(t => t.Name == "DBBG") as Level;
+                double DBBG = LevelDBBG.Elevation;
+                //double BJBG = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                //double DBG = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                //double RDBG = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+
+                double tbh1 = UnitUtils.Convert(50, DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET); // 保护层厚度
+                TaskDialog.Show("信息", DBBG.ToString());
+            }
+            return Result.Succeeded;
+        }
+    }
+    /*
     [TransactionAttribute(TransactionMode.Manual)]
     public class RevitTry1 : IExternalCommand
     {
@@ -409,4 +468,5 @@ namespace CaissonRevit1
             return Result.Succeeded;
         }
     }
+    */
 }
