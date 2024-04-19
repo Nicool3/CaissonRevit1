@@ -354,121 +354,172 @@ namespace CaissonRevit1
         }
     }
 
-    /*
     [TransactionAttribute(TransactionMode.Manual)]
-    public class RevitTry1 : IExternalCommand
+    public class RevitReinTag1 : IExternalCommand
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             UIDocument uiDoc = commandData.Application.ActiveUIDocument;
             Document doc = uiDoc.Document;
             Selection selection = uiDoc.Selection;
-            Reference reference = selection.PickObject(ObjectType.Element);
-            Element element = doc.GetElement(reference);
-            //object obj = element.GetGeometryObjectFromReference(reference);
-            //Face face = obj as Face;
-            if (element != null)
+
+            using (Transaction tr = new Transaction(doc))
             {
-                if (element.GetType() != typeof(FamilyInstance))
+                tr.Start("创建钢筋注释");
+
+                Autodesk.Revit.DB.View view = uiDoc.ActiveView;//当前活动视图
+                Reference refer1 = selection.PickObject(ObjectType.Element, "请选择要标注的钢筋:");
+                Rebar rebar1 = doc.GetElement(refer1) as Rebar;
+                IList<Subelement> subelements = rebar1.GetSubelements(); // here are the subelements
+                IList<Curve> curves = rebar1.GetCenterlineCurves(true, false, false, MultiplanarOption.IncludeAllMultiplanarCurves,0);
+                Curve curve = curves[0];
+                //TaskDialog.Show("111", curve.Length.ToString());
+                //Add the tag to the middle of duct
+                //Curve curve = rebar1.GetCenterlineCurves(true, false, false,MultiplanarOption.IncludeAllMultiplanarCurves,0) as Curve;
+                
+                XYZ rebarMid = curve.Evaluate(0.5, true);
+                IndependentTag tag = IndependentTag.Create(doc,view.Id, refer1, false, TagMode.TM_ADDBY_CATEGORY, TagOrientation.Vertical, rebarMid);
+                tag.get_Parameter(BuiltInParameter.LEADER_LINE).Set(1);
+                tag.TagHeadPosition = tag.TagHeadPosition.Add(new XYZ(-1, 0, 2));
+
+                //
+                //tag.LeaderElbow = tag.LeaderElbow + new XYZ(0,0,-5);
+                //TaskDialog.Show("111", tag.HasLeader.ToString());
+
+                //tag.TagHeadPosition.Add(new XYZ(0, -6, 0));
+
+                /*
+                foreach (var subelement in subelements)
                 {
-                    TaskDialog.Show("错误", "所选对象不是族实例");
-                    return Result.Failed;
+                    IndependentTag tag1 = IndependentTag.Create(doc, view.Id, subelement.GetReference(), 
+                        true, Autodesk.Revit.DB.TagMode.TM_ADDBY_CATEGORY, Autodesk.Revit.DB.TagOrientation.Horizontal, new XYZ(0,0,0));
                 }
+                */
 
-                //ViewPlan viewPlan = doc.ActiveView as ViewPlan;
-                //if (viewPlan == null)
-                //{
-                //    TaskDialog.Show("错误", "不是viewPlan");
-                //    return Result.Failed;
-                //}
-
-                //CurveArray curveArray1 = new CurveArray();
-                //curveArray1.Append(Line.CreateBound(new XYZ(p0.X-length/2-t2+tbh1, p0.Y - width / 2 - t2 + tbh1, 0), new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y + width / 2 + t2 - tbh1, 0)));
-                //curveArray1.Append(Line.CreateBound(new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y + width / 2 + t2 - tbh1, 0), new XYZ(p0.X + length / 2 + t2 - tbh1, p0.Y + width / 2 + t2 - tbh1, 0)));
-                //doc.Create.NewDetailCurveArray(viewPlan, curveArray1);
-
-                XYZ p0 = (element.Location as LocationPoint).Point;
-                FamilyInstance fi = element as FamilyInstance;
-                double t1 = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-                double t2 = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("下部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-                double length = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("沉井净长").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-                double width = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("沉井净宽").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-                Level LevelDBBG = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().FirstOrDefault(t => t.Name == "DBBG") as Level;
-                double DBBG = LevelDBBG.Elevation;
-                //double BJBG = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-                //double DBG = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-                //double RDBG = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-
-                double tbh1 = UnitUtils.Convert(50, DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET); // 保护层厚度
-                TaskDialog.Show("信息", DBBG.ToString());
+                tr.Commit();
+                
             }
+
             return Result.Succeeded;
         }
     }
 
-    [TransactionAttribute(TransactionMode.Manual)]
-    public class RevitTry2 : IExternalCommand
-    {
-        public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+
+        /*
+        [TransactionAttribute(TransactionMode.Manual)]
+        public class RevitTry1 : IExternalCommand
         {
-            UIDocument uiDoc = commandData.Application.ActiveUIDocument;
-            Document doc = uiDoc.Document;
-            Selection selection = uiDoc.Selection;
-            Reference reference = selection.PickObject(ObjectType.Element);
-            Element element = doc.GetElement(reference);
-
-            if (element != null)
+            public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
             {
-                if(element.GetType()!=typeof(FamilyInstance))
+                UIDocument uiDoc = commandData.Application.ActiveUIDocument;
+                Document doc = uiDoc.Document;
+                Selection selection = uiDoc.Selection;
+                Reference reference = selection.PickObject(ObjectType.Element);
+                Element element = doc.GetElement(reference);
+                //object obj = element.GetGeometryObjectFromReference(reference);
+                //Face face = obj as Face;
+                if (element != null)
                 {
-                    TaskDialog.Show("错误", "所选对象不是族实例");
-                    return Result.Failed;
-                }
+                    if (element.GetType() != typeof(FamilyInstance))
+                    {
+                        TaskDialog.Show("错误", "所选对象不是族实例");
+                        return Result.Failed;
+                    }
 
-                XYZ p0 = (element.Location as LocationPoint).Point;
-                FamilyInstance fi = element as FamilyInstance;
-                double t1 = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-                double t2 = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("下部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-                double length = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("沉井净长").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-                double width = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("沉井净宽").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
-                Level LevelDBBG = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().FirstOrDefault(t => t.Name == "DBBG") as Level;
-                Level LevelBJBG = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().FirstOrDefault(t => t.Name == "BJBG") as Level;
-                Level LevelDBG = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().FirstOrDefault(t => t.Name == "DBG") as Level;
-                Level LevelRDBG = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().FirstOrDefault(t => t.Name == "RDBG") as Level;
-                double DBBG = LevelDBBG.Elevation;
-                double BJBG = LevelBJBG.Elevation;
-                double DBG = LevelDBG.Elevation;
-                double RDBG = LevelRDBG.Elevation;
+                    //ViewPlan viewPlan = doc.ActiveView as ViewPlan;
+                    //if (viewPlan == null)
+                    //{
+                    //    TaskDialog.Show("错误", "不是viewPlan");
+                    //    return Result.Failed;
+                    //}
 
-                double tbh1 = UnitUtils.Convert(50, DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET); // 保护层厚度
-                //TaskDialog.Show("信息", DBBG.ToString());
+                    //CurveArray curveArray1 = new CurveArray();
+                    //curveArray1.Append(Line.CreateBound(new XYZ(p0.X-length/2-t2+tbh1, p0.Y - width / 2 - t2 + tbh1, 0), new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y + width / 2 + t2 - tbh1, 0)));
+                    //curveArray1.Append(Line.CreateBound(new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y + width / 2 + t2 - tbh1, 0), new XYZ(p0.X + length / 2 + t2 - tbh1, p0.Y + width / 2 + t2 - tbh1, 0)));
+                    //doc.Create.NewDetailCurveArray(viewPlan, curveArray1);
 
-                using (Transaction tr = new Transaction(doc))
-                {
-                    tr.Start("Create Rein");
+                    XYZ p0 = (element.Location as LocationPoint).Point;
+                    FamilyInstance fi = element as FamilyInstance;
+                    double t1 = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                    double t2 = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("下部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                    double length = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("沉井净长").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                    double width = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("沉井净宽").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                    Level LevelDBBG = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().FirstOrDefault(t => t.Name == "DBBG") as Level;
+                    double DBBG = LevelDBBG.Elevation;
+                    //double BJBG = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                    //double DBG = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                    //double RDBG = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
 
-                    IList<Curve> curves = new List<Curve>();
-                    curves.Add(Line.CreateBound(new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y - width / 2 - t2 + tbh1, DBBG - tbh1), new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y + width / 2 + t2 - tbh1, DBBG - tbh1)));
-                    curves.Add(Line.CreateBound(new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y + width / 2 + t2 - tbh1, DBBG - tbh1), new XYZ(p0.X + length / 2 + t2 - tbh1, p0.Y + width / 2 + t2 - tbh1, DBBG - tbh1)));
-                    curves.Add(Line.CreateBound(new XYZ(p0.X + length / 2 + t2 - tbh1, p0.Y + width / 2 + t2 - tbh1, DBBG - tbh1), new XYZ(p0.X + length / 2 + t2 - tbh1, p0.Y - width / 2 - t2 + tbh1, DBBG - tbh1)));
-                    curves.Add(Line.CreateBound(new XYZ(p0.X + length / 2 + t2 - tbh1, p0.Y - width / 2 - t2 + tbh1, DBBG - tbh1), new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y - width / 2 - t2 + tbh1, DBBG - tbh1)));
-                    
-                    RebarBarType barType = new FilteredElementCollector(doc).OfClass(typeof(RebarBarType)).FirstOrDefault(t => t.Name == "20 HRB400") as RebarBarType;
-                    RebarHookType hookType135 = new FilteredElementCollector(doc).OfClass(typeof(RebarHookType)).FirstOrDefault(t => t.Name == "标准 - 135 度") as RebarHookType;
-                    RebarHookType hookType90 = new FilteredElementCollector(doc).OfClass(typeof(RebarHookType)).FirstOrDefault(t => t.Name == "标准 - 90 度") as RebarHookType;
-                    RebarShape barShape1 = new FilteredElementCollector(doc).OfClass(typeof(RebarShape)).FirstOrDefault(t => t.Name == "34") as RebarShape;
-
-                    Rebar rebar = Rebar.CreateFromCurves(doc, RebarStyle.Standard, barType, null, null,
-                                element, new XYZ(0,0,1), curves, RebarHookOrientation.Right, RebarHookOrientation.Left, true, true);
-                    rebar.GetShapeDrivenAccessor().SetRebarShapeId(barShape1.Id);
-                    rebar.GetShapeDrivenAccessor().SetLayoutAsNumberWithSpacing(20, UnitUtils.Convert(200, DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET),true,true,true);
-
-                    tr.Commit();
+                    double tbh1 = UnitUtils.Convert(50, DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET); // 保护层厚度
+                    TaskDialog.Show("信息", DBBG.ToString());
                 }
                 return Result.Succeeded;
             }
-            return Result.Succeeded;
         }
+
+        [TransactionAttribute(TransactionMode.Manual)]
+        public class RevitTry2 : IExternalCommand
+        {
+            public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+            {
+                UIDocument uiDoc = commandData.Application.ActiveUIDocument;
+                Document doc = uiDoc.Document;
+                Selection selection = uiDoc.Selection;
+                Reference reference = selection.PickObject(ObjectType.Element);
+                Element element = doc.GetElement(reference);
+
+                if (element != null)
+                {
+                    if(element.GetType()!=typeof(FamilyInstance))
+                    {
+                        TaskDialog.Show("错误", "所选对象不是族实例");
+                        return Result.Failed;
+                    }
+
+                    XYZ p0 = (element.Location as LocationPoint).Point;
+                    FamilyInstance fi = element as FamilyInstance;
+                    double t1 = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("上部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                    double t2 = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("下部壁厚").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                    double length = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("沉井净长").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                    double width = UnitUtils.Convert(Int32.Parse(fi.Symbol.LookupParameter("沉井净宽").AsValueString()), DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET);
+                    Level LevelDBBG = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().FirstOrDefault(t => t.Name == "DBBG") as Level;
+                    Level LevelBJBG = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().FirstOrDefault(t => t.Name == "BJBG") as Level;
+                    Level LevelDBG = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().FirstOrDefault(t => t.Name == "DBG") as Level;
+                    Level LevelRDBG = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Levels).WhereElementIsNotElementType().FirstOrDefault(t => t.Name == "RDBG") as Level;
+                    double DBBG = LevelDBBG.Elevation;
+                    double BJBG = LevelBJBG.Elevation;
+                    double DBG = LevelDBG.Elevation;
+                    double RDBG = LevelRDBG.Elevation;
+
+                    double tbh1 = UnitUtils.Convert(50, DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET); // 保护层厚度
+                    //TaskDialog.Show("信息", DBBG.ToString());
+
+                    using (Transaction tr = new Transaction(doc))
+                    {
+                        tr.Start("Create Rein");
+
+                        IList<Curve> curves = new List<Curve>();
+                        curves.Add(Line.CreateBound(new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y - width / 2 - t2 + tbh1, DBBG - tbh1), new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y + width / 2 + t2 - tbh1, DBBG - tbh1)));
+                        curves.Add(Line.CreateBound(new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y + width / 2 + t2 - tbh1, DBBG - tbh1), new XYZ(p0.X + length / 2 + t2 - tbh1, p0.Y + width / 2 + t2 - tbh1, DBBG - tbh1)));
+                        curves.Add(Line.CreateBound(new XYZ(p0.X + length / 2 + t2 - tbh1, p0.Y + width / 2 + t2 - tbh1, DBBG - tbh1), new XYZ(p0.X + length / 2 + t2 - tbh1, p0.Y - width / 2 - t2 + tbh1, DBBG - tbh1)));
+                        curves.Add(Line.CreateBound(new XYZ(p0.X + length / 2 + t2 - tbh1, p0.Y - width / 2 - t2 + tbh1, DBBG - tbh1), new XYZ(p0.X - length / 2 - t2 + tbh1, p0.Y - width / 2 - t2 + tbh1, DBBG - tbh1)));
+
+                        RebarBarType barType = new FilteredElementCollector(doc).OfClass(typeof(RebarBarType)).FirstOrDefault(t => t.Name == "20 HRB400") as RebarBarType;
+                        RebarHookType hookType135 = new FilteredElementCollector(doc).OfClass(typeof(RebarHookType)).FirstOrDefault(t => t.Name == "标准 - 135 度") as RebarHookType;
+                        RebarHookType hookType90 = new FilteredElementCollector(doc).OfClass(typeof(RebarHookType)).FirstOrDefault(t => t.Name == "标准 - 90 度") as RebarHookType;
+                        RebarShape barShape1 = new FilteredElementCollector(doc).OfClass(typeof(RebarShape)).FirstOrDefault(t => t.Name == "34") as RebarShape;
+
+                        Rebar rebar = Rebar.CreateFromCurves(doc, RebarStyle.Standard, barType, null, null,
+                                    element, new XYZ(0,0,1), curves, RebarHookOrientation.Right, RebarHookOrientation.Left, true, true);
+                        rebar.GetShapeDrivenAccessor().SetRebarShapeId(barShape1.Id);
+                        rebar.GetShapeDrivenAccessor().SetLayoutAsNumberWithSpacing(20, UnitUtils.Convert(200, DisplayUnitType.DUT_MILLIMETERS, DisplayUnitType.DUT_DECIMAL_FEET),true,true,true);
+
+                        tr.Commit();
+                    }
+                    return Result.Succeeded;
+                }
+                return Result.Succeeded;
+            }
+        }
+        */
     }
-    */
-}
