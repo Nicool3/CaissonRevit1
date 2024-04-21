@@ -382,9 +382,10 @@ namespace CaissonRevit1
                 tag.get_Parameter(BuiltInParameter.LEADER_LINE).Set(1);
                 tag.TagHeadPosition = tag.TagHeadPosition.Add(new XYZ(-1, 0, 2));
 
-                //
+                TaskDialog.Show("111", tag.LeaderElbow.ToString());
+                
                 //tag.LeaderElbow = tag.LeaderElbow + new XYZ(0,0,-5);
-                //TaskDialog.Show("111", tag.HasLeader.ToString());
+                //
 
                 //tag.TagHeadPosition.Add(new XYZ(0, -6, 0));
 
